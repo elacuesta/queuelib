@@ -1,3 +1,4 @@
+import dbm
 import glob
 import json
 import os
@@ -299,3 +300,77 @@ class FifoSQLiteQueue:
 
 class LifoSQLiteQueue(FifoSQLiteQueue):
     _sql_pop = "SELECT id, item FROM queue ORDER BY id DESC LIMIT 1"
+
+
+class LifoDBMQueue:
+    def __init__(self, path):
+        self._path = path
+        self._db = dbm.open(path, "c")
+
+    def push(self, item):
+        if not isinstance(item, bytes):
+            raise TypeError("Unsupported type: {}".format(type(item).__name__))
+        key = str(len(self._db)).encode()
+        self._db[key] = item
+
+    def pop(self):
+        if len(self._db) == 0:
+            return None
+        key = str(len(self._db) - 1).encode()
+        item = self._db[key]
+        del self._db[key]
+        return item
+
+    def close(self):
+        size = len(self)
+        self._db.close()
+        if size == 0:
+            os.remove(self._path + ".db")
+
+    def __len__(self):
+        return len(self._db)
+
+
+class FifoDBMQueue(LifoDBMQueue):
+    def __init__(self, path):
+        super().__init__(path)
+        assert self._head is not None
+        assert self._tail is not None
+
+    @property
+    def _head(self):
+        return int(self._db.setdefault("_head", b"0"))
+
+    @_head.setter
+    def _head(self, value):
+        self._db["_head"] = str(value).encode()
+
+    @property
+    def _tail(self):
+        return int(self._db.setdefault("_tail", b"0"))
+
+    @_tail.setter
+    def _tail(self, value):
+        self._db["_tail"] = str(value).encode()
+
+    def push(self, item):
+        if not isinstance(item, bytes):
+            raise TypeError("Unsupported type: {}".format(type(item).__name__))
+        if len(self) == 0:
+            self._head = self._tail = 1
+        else:
+            self._tail += 1
+        key = str(self._tail).encode()
+        self._db[key] = item
+
+    def pop(self):
+        if len(self) == 0:
+            return None
+        key = str(self._head).encode()
+        item = self._db[key]
+        del self._db[key]
+        self._head += 1
+        return item
+
+    def __len__(self):
+        return len(self._db) - 2  # _head and _tail keys

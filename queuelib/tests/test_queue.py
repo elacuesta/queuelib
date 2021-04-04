@@ -1,5 +1,5 @@
-import os
 import glob
+import os
 from abc import abstractmethod
 from unittest import mock
 from typing import Any, Optional
@@ -14,6 +14,8 @@ from queuelib.queue import (
     LifoDiskQueue,
     FifoSQLiteQueue,
     LifoSQLiteQueue,
+    FifoDBMQueue,
+    LifoDBMQueue,
 )
 from queuelib.tests import QueuelibTestCase
 
@@ -351,3 +353,37 @@ class FifoSQLiteQueueTest(FifoTestMixin, PersistentTestMixin, QueueTestMixin, Qu
 class LifoSQLiteQueueTest(LifoTestMixin, PersistentTestMixin, QueueTestMixin, QueuelibTestCase):
     def queue(self):
         return LifoSQLiteQueue(self.qpath)
+
+
+class FifoDBMQueueTest(FifoTestMixin, PersistentTestMixin, QueuelibTestCase):
+
+    def queue(self):
+        return FifoDBMQueue(self.qpath)
+
+    def test_cleanup(self):
+        q = self.queue()
+        assert os.path.exists(self.qpath + ".db")
+        values = [b'0', b'1', b'2', b'3', b'4']
+        for x in values:
+            q.push(x)
+        for x in values:
+            q.pop()
+        q.close()
+        assert not os.path.exists(self.qpath + ".db")
+
+
+class LifoDBMQueueTest(LifoTestMixin, PersistentTestMixin, QueuelibTestCase):
+
+    def queue(self):
+        return LifoDBMQueue(self.qpath)
+
+    def test_cleanup(self):
+        q = self.queue()
+        assert os.path.exists(self.qpath + ".db")
+        values = [b'0', b'1', b'2', b'3', b'4']
+        for x in values:
+            q.push(x)
+        for x in values:
+            q.pop()
+        q.close()
+        assert not os.path.exists(self.qpath + ".db")
