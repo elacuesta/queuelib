@@ -362,11 +362,6 @@ class DBMQueueTestMixin:
         for x in values:
             q.push(x)
         filepaths = q._get_file_paths()  # pylint: disable=protected-access
-        print("*" * 100)
-        print("tmpdir:", self.tmpdir)
-        print("listdir:", os.listdir(self.tmpdir))
-        print("qpath:", self.qpath)
-        print("_filepaths:", filepaths)
         assert any(os.path.exists(path) for path in filepaths)
         while len(q) > 0:
             q.pop()

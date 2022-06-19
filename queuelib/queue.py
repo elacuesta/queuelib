@@ -315,6 +315,8 @@ class LifoDBMQueue:
         paths = [getattr(self._db, attr) for attr in ("_datfile", "_dirfile", "_bakfile") if hasattr(self._db, attr)]
         if not paths and os.path.exists(self._path + ".db"):
             paths.append(self._path + ".db")
+        if not paths and os.path.exists(self._path):
+            paths.append(self._path)
         return paths
 
     def push(self, item: bytes) -> None:
