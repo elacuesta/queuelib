@@ -312,9 +312,7 @@ class LifoDBMQueue:
         but different dbm implementations use different files and there doesn't
         seem to be an implementation-agnostic way to do this.
         """
-        paths = [
-            getattr(self._db, attr) for attr in ("_datfile", "_dirfile", "_bakfile") if hasattr(self._db, attr)
-        ]
+        paths = [getattr(self._db, attr) for attr in ("_datfile", "_dirfile", "_bakfile") if hasattr(self._db, attr)]
         if not paths and os.path.exists(self._path + ".db"):
             paths.append(self._path + ".db")
         return paths

@@ -376,9 +376,9 @@ class DBMQueueTestMixin:
 
 class FifoDBMQueueTest(DBMQueueTestMixin, FifoTestMixin, PersistentTestMixin, QueuelibTestCase):
     def queue(self):
-        return FifoDBMQueue(self.qpath)
+        return FifoDBMQueue(self.qpath + "-queue")
 
 
 class LifoDBMQueueTest(DBMQueueTestMixin, LifoTestMixin, PersistentTestMixin, QueuelibTestCase):
     def queue(self):
-        return LifoDBMQueue(self.qpath)
+        return LifoDBMQueue(self.qpath + "-queue")
