@@ -303,17 +303,29 @@ class LifoSQLiteQueue(FifoSQLiteQueue):
 
 
 class LifoDBMQueue:
-    def __init__(self, path):
+    def __init__(self, path: str) -> None:
         self._path = path
         self._db = dbm.open(path, "c")
+        self._determine_file_paths()
 
-    def push(self, item):
+    def _determine_file_paths(self) -> None:
+        """Determine file paths to clean up when closing. Ugly, but different
+        dbm implementations use different files and there doesn't seem to be
+        an implementation-agnostic way to do this.
+        """
+        self._filepaths = [
+            getattr(self._db, attr) for attr in ("_datfile", "_dirfile", "_bakfile") if hasattr(self._db, "_datfile")
+        ]
+        if not self._filepaths and os.path.exists(self._path + ".db"):
+            self._filepaths.append(self._path + ".db")
+
+    def push(self, item: bytes) -> None:
         if not isinstance(item, bytes):
             raise TypeError("Unsupported type: {}".format(type(item).__name__))
         key = str(len(self._db)).encode()
         self._db[key] = item
 
-    def pop(self):
+    def pop(self) -> Optional[bytes]:
         if len(self._db) == 0:
             return None
         key = str(len(self._db) - 1).encode()
@@ -321,39 +333,47 @@ class LifoDBMQueue:
         del self._db[key]
         return item
 
-    def close(self):
+    def peek(self) -> Optional[bytes]:
+        if len(self._db) == 0:
+            return None
+        key = str(len(self._db) - 1).encode()
+        return self._db[key]
+
+    def close(self) -> None:
         size = len(self)
         self._db.close()
         if size == 0:
-            os.remove(self._path + ".db")
+            for path in self._filepaths:
+                if os.path.exists(path):
+                    os.remove(path)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self._db)
 
 
 class FifoDBMQueue(LifoDBMQueue):
-    def __init__(self, path):
+    def __init__(self, path: str) -> None:
         super().__init__(path)
         assert self._head is not None
         assert self._tail is not None
 
     @property
-    def _head(self):
+    def _head(self) -> int:
         return int(self._db.setdefault("_head", b"0"))
 
     @_head.setter
-    def _head(self, value):
+    def _head(self, value: int):
         self._db["_head"] = str(value).encode()
 
     @property
-    def _tail(self):
+    def _tail(self) -> int:
         return int(self._db.setdefault("_tail", b"0"))
 
     @_tail.setter
-    def _tail(self, value):
+    def _tail(self, value: int):
         self._db["_tail"] = str(value).encode()
 
-    def push(self, item):
+    def push(self, item: bytes) -> None:
         if not isinstance(item, bytes):
             raise TypeError("Unsupported type: {}".format(type(item).__name__))
         if len(self) == 0:
@@ -363,7 +383,7 @@ class FifoDBMQueue(LifoDBMQueue):
         key = str(self._tail).encode()
         self._db[key] = item
 
-    def pop(self):
+    def pop(self) -> Optional[bytes]:
         if len(self) == 0:
             return None
         key = str(self._head).encode()
@@ -372,5 +392,11 @@ class FifoDBMQueue(LifoDBMQueue):
         self._head += 1
         return item
 
-    def __len__(self):
+    def peek(self) -> Optional[bytes]:
+        if len(self) == 0:
+            return None
+        key = str(self._head).encode()
+        return self._db[key]
+
+    def __len__(self) -> int:
         return len(self._db) - 2  # _head and _tail keys

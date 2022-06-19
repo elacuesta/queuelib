@@ -222,7 +222,7 @@ class PersistentTestMixin:
     def test_non_bytes_raises_typeerror(self):
         q = self.queue()
         self.assertRaises(TypeError, q.push, 0)
-        self.assertRaises(TypeError, q.push, u"")
+        self.assertRaises(TypeError, q.push, "")
         self.assertRaises(TypeError, q.push, None)
         self.assertRaises(TypeError, q.push, lambda x: x)
 
@@ -355,35 +355,24 @@ class LifoSQLiteQueueTest(LifoTestMixin, PersistentTestMixin, QueueTestMixin, Qu
         return LifoSQLiteQueue(self.qpath)
 
 
-class FifoDBMQueueTest(FifoTestMixin, PersistentTestMixin, QueuelibTestCase):
+class DBMQueueTestMixin:
+    def test_cleanup(self):
+        q = self.queue()
+        assert any((os.path.exists(path) for path in q._filepaths))  # pylint: disable=protected-access
+        values = [b"0", b"1", b"2", b"3", b"4"]
+        for x in values:
+            q.push(x)
+        for x in values:
+            q.pop()
+        q.close()
+        assert not any((os.path.exists(path) for path in q._filepaths))  # pylint: disable=protected-access
 
+
+class FifoDBMQueueTest(DBMQueueTestMixin, FifoTestMixin, PersistentTestMixin, QueuelibTestCase):
     def queue(self):
         return FifoDBMQueue(self.qpath)
 
-    def test_cleanup(self):
-        q = self.queue()
-        assert os.path.exists(self.qpath + ".db")
-        values = [b'0', b'1', b'2', b'3', b'4']
-        for x in values:
-            q.push(x)
-        for x in values:
-            q.pop()
-        q.close()
-        assert not os.path.exists(self.qpath + ".db")
 
-
-class LifoDBMQueueTest(LifoTestMixin, PersistentTestMixin, QueuelibTestCase):
-
+class LifoDBMQueueTest(DBMQueueTestMixin, LifoTestMixin, PersistentTestMixin, QueuelibTestCase):
     def queue(self):
         return LifoDBMQueue(self.qpath)
-
-    def test_cleanup(self):
-        q = self.queue()
-        assert os.path.exists(self.qpath + ".db")
-        values = [b'0', b'1', b'2', b'3', b'4']
-        for x in values:
-            q.push(x)
-        for x in values:
-            q.pop()
-        q.close()
-        assert not os.path.exists(self.qpath + ".db")
