@@ -358,11 +358,16 @@ class LifoSQLiteQueueTest(LifoTestMixin, PersistentTestMixin, QueueTestMixin, Qu
 class DBMQueueTestMixin:
     def test_cleanup(self):
         q = self.queue()
-        assert any(os.path.exists(path) for path in q._filepaths)  # pylint: disable=protected-access
-        values = [b"0", b"1", b"2", b"3", b"4"]
+        print("*" * 100)
+        print("tmpdir:", self.tmpdir)
+        print("listdir:", os.listdir(self.tmpdir))
+        print("qpath:", self.qpath)
+        print("_filepaths:", q._filepaths)
+        values = [str(x).encode() for x in range(10)]
         for x in values:
             q.push(x)
-        for x in values:
+        assert any(os.path.exists(path) for path in q._filepaths)  # pylint: disable=protected-access
+        while len(q) > 0:
             q.pop()
         q.close()
         assert not any(os.path.exists(path) for path in q._filepaths)  # pylint: disable=protected-access
