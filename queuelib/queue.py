@@ -309,12 +309,12 @@ class LifoDBMQueue:
         self._determine_file_paths()
 
     def _determine_file_paths(self) -> None:
-        """Determine file paths to clean up when closing. Ugly, but different
-        dbm implementations use different files and there doesn't seem to be
-        an implementation-agnostic way to do this.
+        """Determine actual file paths on disk, to clean up when closing. Ugly,
+        but different dbm implementations use different files and there doesn't
+        seem to be an implementation-agnostic way to do this.
         """
         self._filepaths = [
-            getattr(self._db, attr) for attr in ("_datfile", "_dirfile", "_bakfile") if hasattr(self._db, "_datfile")
+            getattr(self._db, attr) for attr in ("_datfile", "_dirfile", "_bakfile") if hasattr(self._db, attr)
         ]
         if not self._filepaths and os.path.exists(self._path + ".db"):
             self._filepaths.append(self._path + ".db")
